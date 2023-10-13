@@ -1,7 +1,7 @@
 Package: editbl
 Type: Package
-Version: 0.9.6
-Date: 2023-09-19
+Version: 1.0.1
+Date: 2023-10-13
 Title: 'DT' Extension for CRUD (Create, Read, Update, Delete)
         Applications in 'shiny'
 Authors@R: c(person("Jasper", "Schelfhout", "", "jasper.schelfhout@openanalytics.eu",
@@ -23,9 +23,9 @@ BugReports: https://github.com/openanalytics/editbl/issues
 Encoding: UTF-8
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-09-19 09:22:18 UTC; jschelfhout
+Packaged: 2023-10-13 15:06:00 UTC; jschelfhout
 Author: Jasper Schelfhout [aut, cre],
   Maxim Nazarov [rev],
   Daan Seynaeve [rev]
 Repository: CRAN
-Date/Publication: 2023-09-19 11:00:02 UTC
+Date/Publication: 2023-10-13 15:20:02 UTC
