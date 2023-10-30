@@ -1,4 +1,4 @@
-33b84114f883c6c265b2842357c2282c *DESCRIPTION
+e9d6df466cde5e5ce1b8665891dd157a *DESCRIPTION
 6aa510b6a8dc59c948d7eb3f999795d2 *NAMESPACE
 5d9b461d086ed89d54e71b9800099f0d *R/demoApp.R
 09785d35b8b220d53e5335e61e72034d *R/devApp.R
@@ -8,12 +8,12 @@ e869b71fa096d062bbbd055726a874e7 *R/eDT.R
 246ca35c704d3f2ee880ae2a9cb19c40 *R/selectInputDT.R
 4c37b7695bfdbd49755b4fe2f13457f1 *R/shinyInput.R
 58c38d8bb28aa9a7ea12eb48355e2d7d *R/tbl.R
-ea6c7b49f3580e07dd015f70212587e6 *R/tbl_dbi.R
+dbef6de8e8cddbcff3cfe7e7d796df02 *R/tbl_dbi.R
 9efd7621b9ffaa411e793b5395424f23 *R/tbl_df.R
 23e41a420b54111344f0f7b43dceb943 *R/tbl_dtplyr_step.R
 036c303103e4a52df3b1e75ac620167d *R/utils.R
-b7f30b2f6117995a099fef0e334b5cd1 *README.md
-da3aadb5b20e3ce88aa3a95bda1bc50f *inst/NEWS
+f024d1bc544100855112778a3fe305f8 *README.md
+53dc08043416e5fccf50f65e642800ef *inst/NEWS
 35433f4b8a0f8c7267879f9128b50009 *inst/extdata/artists.xlsx
 b9d1a314222ca1b89e1ff192f4e9bd93 *inst/extdata/chinook.sqlite
 f8f884762376acba4746fe9d1c4aebcd *man/addButtons.Rd
