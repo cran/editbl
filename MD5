@@ -1,8 +1,8 @@
-e9d6df466cde5e5ce1b8665891dd157a *DESCRIPTION
+0aaa563573b4e5bac6c06181b15ccb06 *DESCRIPTION
 6aa510b6a8dc59c948d7eb3f999795d2 *NAMESPACE
 5d9b461d086ed89d54e71b9800099f0d *R/demoApp.R
 09785d35b8b220d53e5335e61e72034d *R/devApp.R
-e869b71fa096d062bbbd055726a874e7 *R/eDT.R
+845d40223ebb38b0b374724f6df7ef02 *R/eDT.R
 6959e22c7dcbb76d7c2c7f611963c0a9 *R/eDT_app.R
 6f153ac92ecc49b8916ec47ba0ad5151 *R/foreignTbl.R
 246ca35c704d3f2ee880ae2a9cb19c40 *R/selectInputDT.R
@@ -12,8 +12,8 @@ dbef6de8e8cddbcff3cfe7e7d796df02 *R/tbl_dbi.R
 9efd7621b9ffaa411e793b5395424f23 *R/tbl_df.R
 23e41a420b54111344f0f7b43dceb943 *R/tbl_dtplyr_step.R
 036c303103e4a52df3b1e75ac620167d *R/utils.R
-f024d1bc544100855112778a3fe305f8 *README.md
-53dc08043416e5fccf50f65e642800ef *inst/NEWS
+a2e0a0a5f73a4111f07ccb3d3a5b92a8 *README.md
+400865992003d391e5a7e259769707a7 *inst/NEWS
 35433f4b8a0f8c7267879f9128b50009 *inst/extdata/artists.xlsx
 b9d1a314222ca1b89e1ff192f4e9bd93 *inst/extdata/chinook.sqlite
 f8f884762376acba4746fe9d1c4aebcd *man/addButtons.Rd
@@ -42,8 +42,8 @@ ea776f9da044bb6b8d2e51a6d2ed5f67 *man/demoServer_mtcars.Rd
 d8b1ab0670fd52cc7ee3666fc1370474 *man/devServer.Rd
 f962fe051297d3dbb9d9b0d8a3e8758c *man/devUI.Rd
 d6aa4e436ac065dd97bf140c100ff351 *man/disableDoubleClickButtonCss.Rd
-13414d9e71b73bec882e04054db47950 *man/eDT.Rd
-c4e4d9b86b6ceb74895f3c1ba7b1f03a *man/eDTOutput.Rd
+351c7dd4b479273cc489ecadea77f924 *man/eDT.Rd
+43a83b82816fcd563b68a5522e6122af *man/eDTOutput.Rd
 17235cba45b6aa0f2e06eacb599b2788 *man/eDT_app.Rd
 9684b8bf51e5f90822b44fb72235486a *man/eDT_app_server.Rd
 83295a2ed200f8b86ba1ab1631edf131 *man/eDT_app_ui.Rd
@@ -87,7 +87,7 @@ fe2f07dd8841631b5100392c21e46201 *man/whereSQL.Rd
 9762cbe4c69159e055a5c399e371cd5d *tests/testthat.R
 25c4849ba78fb5a4a3b0a0d1e83bd456 *tests/testthat/test-demoApp.R
 2f87cb7c058cfb5d3f01de574dd7a3c5 *tests/testthat/test-devApp.R
-1a21940f428dc6f6eb75f604693695dd *tests/testthat/test-eDT.R
+301e07e00a913bba1a63073778657f1d *tests/testthat/test-eDT.R
 81fed457635ecd1d236dc4f4bfb2bc1f *tests/testthat/test-foreignTbl.R
 99dabe5d6331c9871a03d26ececa339b *tests/testthat/test-selectInputDT.R
 c9ae81dbb403b912a51cff2cd922a840 *tests/testthat/test-shinyInput.R

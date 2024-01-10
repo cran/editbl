@@ -66,10 +66,10 @@ eDTOutput <- function(id,...) {
 #' @param foreignTbls `list`. List of objects created by \code{\link{foreignTbl}}
 #' @param statusColor named `character`. Colors to indicate status of the row.
 #' @param inputUI `function`. UI function of a shiny module with at least arguments `id` `data` and `...`.
+#' #'   elements with inputIds identical to one of the column names are used to update the data.
 #' @param defaults expression that evaluates to a `tibble` with (a subset of) columns of the data.
 #'   It will be evaluated for each new row in the environment defined by 'env'.
 #'   This allows for defaults like Sys.time() or uuid::UUIDgenerate() as well as dynamic inputs.
-#'   elements with inputIds identical to one of the column names are used to update the data.
 #' @param env `environment` in which the server function is running. Should normally not be modified.
 #' 
 #' @return list
@@ -105,6 +105,14 @@ eDTOutput <- function(id,...) {
 #'       eDT('tbl',iris,)
 #'     }
 #'   )
+#' 
+#'   # Custom inputUI
+#'   editbl::eDT(mtcars, inputUI = function(id, data){
+#'     ns <- NS(id)
+#'     textInput(
+#'     ns("mpg"),
+#'     label = "mpg",
+#'     value = data$mpg)})
 #' }
 #' 
 #' @author Jasper Schelfhout
@@ -144,7 +152,7 @@ eDT <- function(
     statusColor = c("insert"="#e6e6e6", "update"="#32a6d3", "delete"="#e52323"),
     inputUI = editbl::inputUI,
     defaults = tibble(),
-    env = parent.frame()
+    env = environment()
 ) {  
   args <- as.list(environment())
   
@@ -220,6 +228,7 @@ eDTServer <- function(
       id,
       function(input, output, session) {
         ns <- session$ns
+                
         rv <- reactiveValues(
             changelog = list(),
             changeLogTracker = 0,
@@ -341,10 +350,16 @@ eDTServer <- function(
         if(!shiny::is.reactive(inputUI)){
           inputUI <- shiny::reactive(inputUI, env = argEnv)
         }
-        
-        if(!shiny::is.reactive(defaults)){
-          defaults <- shiny::reactive(defaults, env = argEnv)
+
+        if(!shiny::is.reactive(defaults)){  
+          defaults <- shiny::reactive({
+                eval(substitute(defaults, env))
+              },
+              env = argEnv)
         }
+        
+        # Force re-evaluting reactive for values like Sys.time(), uuid::UUIDgenerate()
+        defaultsAddBound <- defaults %>% shiny::bindEvent(input$add)
         
         # Some arguments can have various formats.
         # Standardize first to the most expressive format to make
@@ -592,7 +607,7 @@ eDTServer <- function(
         observeEvent(input$edit, {
               showModal(
                   modalDialog(
-                      inputUI()(id = ns(editModalId())),
+                      inputUI()(id = ns(editModalId()), data = rv$modifiedData[clickedRow(),]),
                       footer = tagList(
                           actionButton(ns("confirmEdit"), "Ok"),
                           modalButton("cancel")
@@ -706,7 +721,7 @@ eDTServer <- function(
         observeEvent(input$DT_cells_filled, {      
               req(!is.null(input$DT_cells_filled) && isTruthy(input$DT_cells_filled))
               edits <- input$DT_cells_filled
-              edits$row <- edits$row + min(input$DT_rows_current -1)
+              edits$row <- input$DT_rows_current[edits$row]           
               rv$edits <- edits
               rv$edits_react <-  rv$edits_react + 1
             })
@@ -803,10 +818,7 @@ eDTServer <- function(
               newRow <- newRow[1,]
               newRow <- fixInteger64(newRow) # https://github.com/Rdatatable/data.table/issues/4561
               
-              defaults <- eval(substitute(defaults, env))
-              if(is.reactive(defaults)){
-                defaults <- defaults()
-              }
+              defaults <- defaultsAddBound()
               for(col in base::colnames(defaults)){
                 currentClass <- base::class(data[[col]])
                 defaultClass <- base::class(defaults[[col]])
@@ -906,7 +918,7 @@ eDTServer <- function(
               }
             })
         
-        observeEvent(input$confirmCommit, {
+        observeEvent(input$confirmCommit, {              
               req(!is.null(effectiveChanges()) && isTruthy(effectiveChanges()))
               modified <- effectiveChanges()
               cols <- as.character(dplyr::tbl_vars(data()))
@@ -948,16 +960,20 @@ eDTServer <- function(
                     inserted <- inserted[,cols]
                     
                     if(nrow(deleted)){
-                      if(inherits(result, 'tbl_dbi')){
+                      if(inherits(result, 'tbl_dbi') & in_place()){
                         # dbplyr:::rows_delete.tbl_dbi requires y to be in the same source and will start a transaction for this if not the case.
                         # Most backends do not support nested transactions. Therefore manually copy the data first.
+                        # See also: https://github.com/tidyverse/dbplyr/issues/1298
                         temp_name = paste0("editbl_", gsub("-", "", UUIDgenerate()))
                         deleted <- dplyr::copy_to(
-                            dest = result$src,
+                            dest = dbplyr::remote_src(result),
                             df = deleted,
                             name = temp_name,
                             temporary = TRUE,
-                            in_transaction = FALSE)
+                            in_transaction = FALSE,
+                            types = dbplyr::db_col_types(
+                                dbplyr::remote_con(result),
+                                dbplyr::remote_table(result))[base::colnames(deleted)])
                       }
                       
                       result <- rows_delete(
@@ -968,7 +984,7 @@ eDTServer <- function(
                           unmatched = 'ignore')
                       
                       if(inherits(result, 'tbl_dbi')){
-                        DBI::dbRemoveTable(result$src$con, temp_name)
+                        DBI::dbRemoveTable(dbplyr::remote_con(result), temp_name)
                       }
                     }
                     if(nrow(edited)){
