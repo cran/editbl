@@ -1,3 +1,7 @@
+1.0.4
+	o Fixed bug when using non-English locale ([issue](https://github.com/openanalytics/editbl/issues/3)) 
+	o Added vignettes + revised documentation
+    o Prevent greyout when dragging value with increment ([issue](https://github.com/openanalytics/editbl/issues/4)).
 1.0.3
     o FIX: inputUI argument was not working, now passing on the selected row.
     o FIX: Evaluate defaults argument for each new row

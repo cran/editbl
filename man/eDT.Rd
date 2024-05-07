@@ -172,7 +172,7 @@ set for all \code{Date} columns.}
 
 \item{keys}{\code{character}. Defaults to all columns under the assumption that at least every row is unique.}
 
-\item{in_place}{\code{logical}}
+\item{in_place}{\code{logical}. Whether to modify the data object in place or to return a modified copy.}
 
 \item{format}{function accepting and returning a \code{\link[DT]{datatable}}}
 

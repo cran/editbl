@@ -62,7 +62,7 @@ eDTOutput <- function(id,...) {
 #' @inheritParams DT::datatable
 #' @param keys `character`. Defaults to all columns under the assumption that at least every row is unique.
 #' @param format function accepting and returning a \code{\link[DT]{datatable}}
-#' @param in_place `logical`
+#' @param in_place `logical`. Whether to modify the data object in place or to return a modified copy.
 #' @param foreignTbls `list`. List of objects created by \code{\link{foreignTbl}}
 #' @param statusColor named `character`. Colors to indicate status of the row.
 #' @param inputUI `function`. UI function of a shiny module with at least arguments `id` `data` and `...`.
@@ -224,6 +224,7 @@ eDTServer <- function(
     defaults = tibble(),
     env = environment()
 ) {
+  missingContainer <- missing(container)
   moduleServer(
       id,
       function(input, output, session) {
@@ -266,7 +267,6 @@ eDTServer <- function(
           colnames <- shiny::reactive(colnames, env = argEnv)
         }
         
-        missingContainer <- isMissing(container)
         if(!missingContainer && !shiny::is.reactive(container)){
           container <- shiny::reactive(container, env = argEnv)
         }
@@ -718,7 +718,7 @@ eDTServer <- function(
               shiny::removeModal()
             })
         
-        observeEvent(input$DT_cells_filled, {      
+        observeEvent(input$DT_cells_filled, {
               req(!is.null(input$DT_cells_filled) && isTruthy(input$DT_cells_filled))
               edits <- input$DT_cells_filled
               edits$row <- input$DT_rows_current[edits$row]           
@@ -1256,13 +1256,13 @@ keyTableJS <- c(
 autoFillJs <- c(
     "var tbl = $(table.table().node());",
     "var id = tbl.closest('.datatables').attr('id');",
-    "table.on('autoFill', function(e, datatable, cells){",
+    "table.on('preAutoFill', function(e, datatable, cells){",
     "  var out = [];",
     "  for(var i = 0; i < cells.length; ++i){",
     "    var cells_i = cells[i];",
     "    for(var j = 0; j < cells_i.length; ++j){",
     "      var c = cells_i[j];",
-    "      var value = c.set === null ? '' : c.set;", # null => problem in R
+    "      var value = (c.set === null || (typeof c.set === 'number' && isNaN(c.set)))? '' : c.set;", # null => problem in R
     "      out.push({",
     "        row: c.index.row + 1,",
     "        col: c.index.column,",
