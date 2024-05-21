@@ -41,7 +41,7 @@ dbServer <- function(id, conn) {
   )
 }
 
-## ----screenshot.opts = list(vwidth = 700, vheight = 500)----------------------
+## ----screenshot.opts = list(vwidth = 700, vheight = 500), screenshot.alt = 'screenshots/howto_relational_db_1.png'----
 shiny::shinyApp( 
     ui = dbUI('id'),
     server =  function(input, output,session){
@@ -79,7 +79,7 @@ dbServer_hidden_keys <- function(id, conn) {
   )
 }
 
-## ----screenshot.opts = list(vwidth = 700, vheight = 500)----------------------
+## ----screenshot.opts = list(vwidth = 700, vheight = 500), screenshot.alt = 'screenshots/howto_relational_db_2.png'----
 shiny::shinyApp( 
     ui = dbUI('id'),
     server =  function(input, output,session){
@@ -140,7 +140,7 @@ dbServer_advanced <- function(id, conn) {
   )
 }
 
-## ----screenshot.opts = list(vwidth = 700, vheight = 500)----------------------
+## ----screenshot.opts = list(vwidth = 700, vheight = 500), , screenshot.alt = 'screenshots/howto_relational_db_3.png'----
 shiny::shinyApp( 
     ui = dbUI_advanced('id'),
     server =  function(input, output,session){

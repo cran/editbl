@@ -3,7 +3,7 @@ library(shiny)
 library(DT)
 library(editbl)
 
-## ----screenshot.opts = list(vwidth = 700)-------------------------------------
+## ----screenshot.opts = list(vwidth = 700), screenshot.alt = 'screenshots/howto_switch_from_DT_1.png'----
 ui <- fluidPage(DTOutput("DT"))
 server <- function(input, output, session){
   output$DT <- renderDataTable({
@@ -16,7 +16,7 @@ server <- function(input, output, session){
 }
 shinyApp(ui, server)
 
-## ----screenshot.opts = list(vwidth = 700)-------------------------------------
+## ----screenshot.opts = list(vwidth = 700), screenshot.alt = 'screenshots/howto_switch_from_DT_2.png'----
 ui <- fluidPage(eDTOutput("DT"))
 server <- function(input, output, session){
   editbl::eDT(
