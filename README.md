@@ -5,21 +5,8 @@
 
 ![](https://github.com/openanalytics/editbl/blob/main/editbl_logo.png?raw=true)
 
-`editbl` allows you to do exactly what is says: 'edit tibbles'.
-Meaning you can explore and modify any kind of tabular data, independently of where it is stored, in a spreadsheet-like fashion.
-
-The package builds around [DT](https://CRAN.R-project.org/package=DT) as light weight as possible to provide you with a nice interface to edit your data,
-while still keeping as much flexibility as possible to customize the table yourself.
-
-Main features by which it distinguishes itself from other CRUD (create, read, update, delete) packages:
-
-* Supporting multiple backends and in-place editing.
-* Easy customizable shiny integration.
-* undo/redo button
-* No need to have all data in-memory.
-* Developed with focus on relational databases. Tackles challenges such as enforcing foreign keys and hiding of surrogate keys.
-* Transactional commits (currently for `tbl_dbi` class and non in-place editing).
-* Default values for new rows (UUID's, 'current date', 'inserted by', ...)
+`editbl` ('*edit [tibble](https://cran.r-project.org/package=tibble)*') allows you to modify tables in a spreadsheet-like fashion. Not just in-memory `data.frame` objects, but also
+data living in a database.
 
 ## Installation
 
@@ -55,13 +42,22 @@ editbl::runDemoApp()
 More introductory examples can be found [here](https://github.com/openanalytics/editbl/blob/main/editbl/R/demoApp.R).
 Advanced examples can be found in the [vignettes](https://github.com/openanalytics/editbl/tree/main/editbl/vignettes).
 
-## Switching from DT
 
-Let's say you already use `DT::datatable()` to display your data, but want to switch to `editbl::eDT()` to be able to edit it. Would this be a lot of effort? No!
-In fact, `eDT()` accepts the exact same arguments. So it is almost as easy as replacing the functions and you are done.
-Should you run into problems take a look [here](https://github.com/openanalytics/editbl/blob/main/editbl/vignettes/howto_switch_from_DT.rmd) for some pointers to look out for.
+## Features
 
-## Constraints and normalized tables
+### Overview of main features
+
+* Supporting multiple backends and in-place editing.
+* Customizable (lightweight [DT](https://CRAN.R-project.org/package=DT) wrapper).
+* Easy integration in [shiny](https://cran.r-project.org/package=shiny) apps.
+* Undo/redo button
+* No need to have all data in-memory.
+* Tackles challenges such as enforcing foreign keys and hiding of surrogate keys.
+* Transactional commits (currently for `tbl_dbi` class and non in-place editing).
+* Default values for new rows (UUID's, 'current date', 'inserted by', ...)
+* Possible to set row level security
+
+### Constraints and normalized tables
 
 Sometimes you want to restrict certain columns of your table to only contain specific values.
 Many of these restrictions would be implemented at database level through the use of foreign keys to other tables.
@@ -91,14 +87,14 @@ eDT(a,
 )
 ```
 
-## Support for different backends
+### Support for different backends
 
 `dplyr` code is used for all needed data manipulations and it is recommended to pass on your data as a `tbl`.
 This allows editbl to support multiple backends through the usage of other packages like `dtplyr`, `dbplyr` etc.
 
 In case you pass on other tabular objects like `data.frame` or `data.table` the function will internally automatically
 cast back and forth to `tbl`. Small side effects may occur because of this (like loosing rownames), so it might be better
-to cast yourself to `tbl` explicitly before passing on data to be in full control.
+to cast yourself to `tbl` explicitly first.
 
 ```
 # tibble support
@@ -118,15 +114,6 @@ modifiedData <- editbl::eDT(dplyr::tbl(conn, "Artist"), in_place = TRUE)
 DBI::dbDisconnect(conn)
 unlink(tmpFile)
 
-# excel integration
-xlsx_file <- system.file("extdata",
-            "artists.xlsx",
-            package="editbl")
-xlsx_tbl <- tibble::as_tibble(
-                  openxlsx::read.xlsx(xlsx_file)
-              )
-modified <- eDT(xlsx_tbl)
-openxlsx::write.xlsx(modified, xlsx_file)
 ```
 
 Note that there are some custom methods in the package itself for `rows_update` / `rows_delete` / `rows_insert`. The goal
@@ -134,16 +121,19 @@ would be to fully rely on `dplyr` once these functions are not experimental anym
 These functions also explain the high amount of 'suggested' packages, while the core functionality of `editbl` has few
 dependencies.
 
-## Concurrent updates
+## Switching from DT
 
-`editbl` does not attempt to detect/give notifications on concurrent updates by other users to the same data, nor does it 'lock' the rows you are updating.
-It just sends its updates to the backend by matching on the keys of a row. If other users have in the meantime made conflicting adjustements,
-the changes you made might not be executed correctly or errors might be thrown.
+Let's say you already use `DT::datatable()` to display your data, but want to switch to `editbl::eDT()` to be able to edit it. Would this be a lot of effort? No!
+In fact, `eDT()` accepts the exact same arguments. So it is almost as easy as replacing the functions and you are done.
+Should you run into problems take a look [here](https://github.com/openanalytics/editbl/blob/main/editbl/vignettes/howto_switch_from_DT.rmd) for some pointers to look out for.
 
 ## Notes
 
 * https://github.com/tidyverse/dtplyr/issues/260 might cause errors / warnings when using `eDT` with `dtplyr`. If possible convert to normal tibble first.
 * `editbl` assumes that **all rows in your table are unique**. This assumption is the key (ba dum tss) to allow for only having the data partially in memory.
+* `editbl` does not attempt to detect/give notifications on concurrent updates by other users to the same data, nor does it 'lock' the rows you are updating.
+It just sends its updates to the backend by matching on the keys of a row. If other users have in the meantime made conflicting adjustments,
+the changes you made might not be executed correctly or errors might be thrown.
 
 ## General future goals for this package
 
@@ -190,10 +180,12 @@ Depending on your needs, they might be better alternatives.
 
 [CRAN `tibble`](https://cran.r-project.org/package=tibble)
 
+[Blogpost spreadsheets vs robust backends](https://www.openanalytics.eu/blog/2023/02/12/spreadsheets-backends-love/)
+
 [Blogpost buttons in DT](https://thatdatatho.com/adding-action-buttons-in-rows-of-dt-data-table-in-r-shiny/)
 
 [Blogpost shiny vs excel](https://appsilon.com/forget-about-excel-use-r-shiny-packages-instead/)
 
 [Generic CRUD application](https://github.com/garrylachman/ElectroCRUD)
 
-[Example SQLite databse](https://www.sqlitetutorial.net/sqlite-sample-database/)
+[Example SQLite database](https://www.sqlitetutorial.net/sqlite-sample-database/)
