@@ -1,7 +1,7 @@
 Package: editbl
 Type: Package
-Version: 1.2.0
-Date: 2025-03-28
+Version: 1.3.0
+Date: 2025-04-23
 Title: 'DT' Extension for CRUD (Create, Read, Update, Delete)
         Applications in 'shiny'
 Authors@R: c(person("Jasper", "Schelfhout", "", "jasper.schelfhout@openanalytics.eu",
@@ -13,7 +13,7 @@ Authors@R: c(person("Jasper", "Schelfhout", "", "jasper.schelfhout@openanalytics
            person("Lennart", "Tuijnder", "", "lennart.tuijnder@openanalytics.eu",
            role = c("rev")),
 		   person("Saar", "Junius", "", "saar.junius@openanalytics.eu",
-           role = c("ctb")))
+           role = c("aut")))
 Maintainer: Jasper Schelfhout <jasper.schelfhout@openanalytics.eu>
 Description: The core of this package is a function eDT() which enhances DT::datatable() such that it can be used to interactively modify data in 'shiny'. By the use of generic 'dplyr' methods it supports many types of data storage, with relational databases ('dbplyr') being the main use case.
 License: GPL-3
@@ -28,11 +28,11 @@ VignetteBuilder: knitr
 Encoding: UTF-8
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2025-03-31 08:25:46 UTC; jasper
+Packaged: 2025-04-24 13:12:08 UTC; jasper
 Author: Jasper Schelfhout [aut, cre],
   Maxim Nazarov [rev],
   Daan Seynaeve [rev],
   Lennart Tuijnder [rev],
-  Saar Junius [ctb]
+  Saar Junius [aut]
 Repository: CRAN
-Date/Publication: 2025-03-31 11:20:01 UTC
+Date/Publication: 2025-04-24 13:40:02 UTC
