@@ -46,7 +46,9 @@ eDT(
 )
 }
 \arguments{
-\item{data}{\code{tbl}. The function will automatically cast to tbl if needed.}
+\item{data}{\code{tbl}. When using non-standard tibble objects, install the required package implementing specific methods.
+(\code{data.table}: dtplyr, spark: sparklyr, generic database: dbplyr,...).
+While other tabular objects like \code{data.frame} are supported, explicitly casting to \code{tbl} is recommended.}
 
 \item{options}{a list of initialization options (see
 \url{https://datatables.net/reference/option/}); the character options
@@ -199,19 +201,19 @@ It will be evaluated for each cloned row in the environment defined by 'env'.}
 
 \item{canEditRow}{can be either of the following:
 \itemize{
-\item \code{logical}, e.g. TRUE or FALSE
+\item \code{logical}, e.g. TRUE or FALSE. In case of \code{FALSE}, buttons will not be visible except for new rows.
 \item \code{function}. Needs as input an argument \code{row} which accepts a single row \code{tibble} and as output TRUE/FALSE.
 }}
 
 \item{canDeleteRow}{can be either of the following:
 \itemize{
-\item \code{logical}, e.g. TRUE or FALSE
+\item \code{logical}, e.g. TRUE or FALSE. In case of \code{FALSE}, buttons will not be visible except for new rows.
 \item \code{function}. Needs as input an argument \code{row} which accepts a single row \code{tibble} and as output TRUE/FALSE.
 }}
 
 \item{canCloneRow}{can be either of the following:
 \itemize{
-\item \code{logical}, e.g. TRUE or FALSE
+\item \code{logical}, e.g. TRUE or FALSE. In case of \code{FALSE}, buttons will not be visible except for new rows.
 \item \code{function}. Needs as input an argument \code{row} which accepts a single row \code{tibble} and as output TRUE/FALSE.
 }}
 
@@ -232,6 +234,9 @@ list
 \item result \code{reactive} modified version of \code{data} (saved)
 \item state \code{reactive} current state of the \code{data} (unsaved)
 \item selected \code{reactive} selected rows of the \code{data} (unsaved)
+\item edited \code{reactive} edited rows (saved)
+\item inserted \code{reactive} inserted rows (saved)
+\item deleted \code{reactive} deleted rows (saved)
 }
 }
 \description{

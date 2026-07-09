@@ -1,5 +1,43 @@
+#' Delete rows from a tibble
+#' @details Mainly a wrapper around \code{\link[dplyr]{rows_delete}}.
+#' Allows for specific implementations should the behavior differ from what's needed by `editbl`.
+#' Reason for separate method is to avoid conflicts on package loading.
+#' 
+#' @inheritParams dplyr::rows_delete
+#' @inherit dplyr::rows_delete return details
+#' @export
+e_rows_delete <- function(
+		x,
+		y,
+		by = NULL,
+		...,
+		unmatched = c("error", "ignore"),
+		copy = FALSE,
+		in_place = FALSE){
+	UseMethod("e_rows_delete")
+}
+
+#' @inherit e_rows_delete
+#' @export
 #' @importFrom dplyr rows_delete
-NULL
+e_rows_delete.default <- function(
+		x,
+		y,
+		by = NULL,
+		...,
+		unmatched = c("error", "ignore"),
+		copy = FALSE,
+		in_place = FALSE){
+	dplyr::rows_delete(
+			x = x,
+			y = y,
+			by = by,
+			... ,
+			unmatched = unmatched,
+			copy = copy,
+			in_place = in_place)
+}
+
 
 #' Insert rows into a tibble
 #' @details Mainly a wrapper around \code{\link[dplyr]{rows_insert}}.
@@ -90,6 +128,7 @@ e_rows_update.default <- function(
 #' @param tbl `tbl`
 #' 
 #' @author Jasper Schelfhout
+#' @keywords internal
 beginTransaction <- function(tbl){
   if(inherits(tbl, "tbl_dbi")){
     DBI::dbBegin(tbl$src$con)
@@ -100,6 +139,7 @@ beginTransaction <- function(tbl){
 #' @param tbl `tbl`
 #' 
 #' @author Jasper Schelfhout
+#' @keywords internal
 commitTransaction <- function(tbl){
   if(inherits(tbl, "tbl_dbi")){
     DBI::dbCommit(tbl$src$con)
@@ -110,6 +150,7 @@ commitTransaction <- function(tbl){
 #' @param tbl `tbl`
 #' 
 #' @author Jasper Schelfhout
+#' @keywords internal
 rollbackTransaction <- function(tbl){
   if(inherits(tbl, "tbl_dbi")){
     DBI::dbRollback(tbl$src$con)

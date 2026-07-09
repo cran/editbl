@@ -13,7 +13,7 @@
 
 <meta name="date" content="2026-07-09" />
 
-<title>Row level access</title>
+<title>Custom logic</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -338,88 +338,97 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Row level access</h1>
+<h1 class="title toc-ignore">Custom logic</h1>
 <h4 class="date">2026-07-09</h4>
 
 
 
-<p>Sometimes you do not want to give a user access to the entire
-dataset. You can either hide rows or give read-only access.</p>
-<div id="hide-rows-completely" class="section level2">
-<h2>Hide rows completely</h2>
-<p>In this example we only allow user Mickey to see his own row.</p>
-<p>We simply can use <code>dplyr::filter()</code> on the table. Note
-that this is most useful if you combine this with backends that support
-<code>in_place</code> editing. E.g. you can retrieve only a subset of
-rows from a database and specifically modify those. Take a look at the
-‘relational database’ vignettes for more information on how to work with
-a database.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(editbl)</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(shiny)</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>conn <span class="ot">&lt;-</span> DBI<span class="sc">::</span><span class="fu">dbConnect</span>(RSQLite<span class="sc">::</span><span class="fu">SQLite</span>(), <span class="st">&quot;&quot;</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>    <span class="at">user =</span> <span class="fu">c</span>(<span class="st">&quot;Albert&quot;</span>,<span class="st">&quot;Donald&quot;</span>,<span class="st">&quot;Mickey&quot;</span>),</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>    <span class="at">email =</span> <span class="fu">c</span>(<span class="st">&#39;albert@einstein.com&#39;</span>, <span class="st">&#39;donald@duck.com&#39;</span>, <span class="st">&#39;mickey@mouse.com&#39;</span>)</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>)</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>DBI<span class="sc">::</span><span class="fu">dbWriteTable</span>(conn, <span class="st">&quot;characters&quot;</span>, df)</span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>tibble <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">tbl</span>(conn, <span class="st">&#39;characters&#39;</span>)</span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>CURRENT_USER <span class="ot">=</span> <span class="st">&#39;Mickey&#39;</span></span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>shiny<span class="sc">::</span><span class="fu">shinyApp</span>( </span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>    <span class="at">ui =</span> editbl<span class="sc">::</span><span class="fu">eDTOutput</span>(<span class="st">&#39;id&#39;</span>),</span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>    <span class="at">server =</span>  <span class="cf">function</span>(input, output,session){</span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>      result <span class="ot">&lt;-</span> <span class="fu">eDT</span>(<span class="at">id=</span><span class="st">&#39;id&#39;</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>        <span class="at">data =</span> tibble <span class="sc">%&gt;%</span> <span class="fu">filter</span>(user <span class="sc">==</span> CURRENT_USER),</span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>        <span class="at">in_place =</span> <span class="cn">TRUE</span></span>
-<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>      )</span>
-<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>    })</span></code></pre></div>
+<p>When saving your modifications, eDT will just update the data hereby
+only checking the data types and foreign tables. Sometimes however, you
+might want some specific custom behavior or extra checks that
+<code>editbl</code> doesn’t support out of the box. There are two main
+solutions to write custom logic for the modifications that were
+made.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(shiny)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(editbl)</span></code></pre></div>
+<div id="option-1" class="section level2">
+<h2>Option 1</h2>
+<p>Add your own implementations for <code>e_rows_update()</code>,
+<code>e_rows_insert()</code> and/or <code>e_rows_delete</code>. This is
+arguably the most flexible approach since it nicely integrates with the
+behavior of eDT.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(<span class="fu">eDTOutput</span>(<span class="st">&quot;DT&quot;</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Define a custom update function</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>e_rows_update.mtcars <span class="ot">&lt;-</span> <span class="cf">function</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>    x,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>    y,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="at">by =</span> <span class="cn">NULL</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    ...,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>    <span class="at">match =</span> match,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>    <span class="at">unmatched =</span> <span class="fu">c</span>(<span class="st">&quot;error&quot;</span>, <span class="st">&quot;ignore&quot;</span>),</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>    <span class="at">copy =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>    <span class="at">in_place =</span> <span class="cn">FALSE</span>){      </span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>        </span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>        <span class="co"># Extra checks</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">any</span>(y[,<span class="st">&quot;mpg&quot;</span>] <span class="sc">&lt;</span> <span class="dv">0</span>)){</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>            <span class="fu">stop</span>(<span class="st">&quot;mpg should be a positive value!&quot;</span>) </span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>        }</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>        </span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>        <span class="co"># Logging</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>        <span class="fu">print</span>(<span class="st">&quot;Updated rows:&quot;</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>        <span class="fu">print</span>(y)</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>        </span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>        <span class="co"># Drop extra class and execute default code</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>        <span class="fu">class</span>(x) <span class="ot">&lt;-</span> <span class="fu">class</span>(x)[<span class="fu">class</span>(x) <span class="sc">!=</span> <span class="st">&#39;mtcars&#39;</span>]</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>        <span class="fu">e_rows_update</span>(</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>          <span class="at">x =</span> x,</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>          <span class="at">y =</span> y,</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>          <span class="at">by =</span> by,</span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>          ... ,</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>          <span class="at">match =</span> match,</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>          <span class="at">unmatched =</span> unmatched,</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>          <span class="at">copy =</span> copy,</span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>          <span class="at">in_place =</span> in_place</span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a>      )</span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a>    }</span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session){</span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a>    </span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a>    <span class="co"># Add a new class to your data object</span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a>    df <span class="ot">=</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(mtcars)</span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a>    <span class="fu">class</span>(df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;mtcars&quot;</span>, <span class="fu">class</span>(df))</span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a>      result <span class="ot">=</span> <span class="fu">eDT</span>(</span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a>        <span class="at">id =</span> <span class="st">&quot;DT&quot;</span>,</span>
+<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a>        <span class="at">data =</span> df</span>
+<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a>    )</span>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a>       </span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a>}</span>
+<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code></pre></div>
 <div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">print</span>(tibble)</span></code></pre></div>
-<pre><code>## # Source:   table&lt;`characters`&gt; [?? x 2]
-## # Database: sqlite 3.53.3 []
-##   user   email              
-##   &lt;chr&gt;  &lt;chr&gt;              
-## 1 Albert albert@einstein.com
-## 2 Donald donald@duck.com    
-## 3 Mickey mickey@mouse.com</code></pre>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>DBI<span class="sc">::</span><span class="fu">dbDisconnect</span>(conn)</span></code></pre></div>
 </div>
-<div id="read-only-access" class="section level2">
-<h2>Read-only access</h2>
-<p>In this example we only allow user Mickey to modify his own row. In
-contrast to the previous example, he can still read data from
-others.</p>
-<p>The arguments <code>canEditRow</code> and <code>canDeleteRow</code>
-can be used to specify logic describing if modfications are allowed. The
-passed on logic shoud be a function with the argument <code>row</code>.
-This is a single row of the displayed table in datatype
-<code>tibble</code>.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">library</span>(editbl)</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>df <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>    <span class="at">user =</span> <span class="fu">c</span>(<span class="st">&quot;Albert&quot;</span>,<span class="st">&quot;Donald&quot;</span>,<span class="st">&quot;Mickey&quot;</span>),</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>    <span class="at">email =</span> <span class="fu">c</span>(<span class="st">&#39;albert@einstein.com&#39;</span>, <span class="st">&#39;donald@duck.com&#39;</span>, <span class="st">&#39;mickey@mouse.com&#39;</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>CURRENT_USER <span class="ot">=</span> <span class="st">&#39;Mickey&#39;</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>rowModificationLogic <span class="ot">&lt;-</span> <span class="cf">function</span>(row){</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>        <span class="cf">if</span> (row[,<span class="st">&#39;user&#39;</span>] <span class="sc">==</span> CURRENT_USER){</span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>          <span class="cn">TRUE</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>          <span class="cn">FALSE</span>  </span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>        }</span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>    }</span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>shiny<span class="sc">::</span><span class="fu">shinyApp</span>( </span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>    <span class="at">ui =</span> editbl<span class="sc">::</span><span class="fu">eDTOutput</span>(<span class="st">&#39;id&#39;</span>),</span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    <span class="at">server =</span>  <span class="cf">function</span>(input, output,session){</span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>      <span class="fu">eDT</span>(<span class="at">id=</span><span class="st">&#39;id&#39;</span>,</span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>        <span class="at">data =</span> df,</span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>        <span class="at">canEditRow =</span> rowModificationLogic,</span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>        <span class="at">canDeleteRow =</span> rowModificationLogic</span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>        )</span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>    })</span></code></pre></div>
+<div id="option-2" class="section level2">
+<h2>Option 2</h2>
+<p>You can capture the modifications made by editbl and handle them
+downstream in the app. This is more straightforward, but doesn’t support
+adding any logic before saving.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(<span class="fu">eDTOutput</span>(<span class="st">&quot;DT&quot;</span>))</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session){</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>      result <span class="ot">=</span> <span class="fu">eDT</span>(</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>        <span class="at">id =</span> <span class="st">&quot;DT&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>        <span class="at">data =</span> mtcars</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>      )</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>      </span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>      <span class="co"># Some logging</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>      <span class="fu">observe</span>({</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>        <span class="fu">print</span>(<span class="st">&#39;These rows have been permanently deleted:&#39;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>        <span class="fu">print</span>(result<span class="sc">$</span><span class="fu">deleted</span>())</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>      })</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>       </span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code></pre></div>
 <div style="width: 100% ; height: 400px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
 </div>
 

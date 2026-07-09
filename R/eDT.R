@@ -58,7 +58,9 @@ eDTOutput <- function(id,...) {
 #' @details All arguments except 'id' and 'env' can be normal objects or reactive objects.
 #' 
 #' @param id `character(1)` module id
-#' @param data `tbl`. The function will automatically cast to tbl if needed.
+#' @param data `tbl`. When using non-standard tibble objects, install the required package implementing specific methods.
+#' (`data.table`: dtplyr, spark: sparklyr, generic database: dbplyr,...).
+#' While other tabular objects like `data.frame` are supported, explicitly casting to `tbl` is recommended.
 #' @inheritParams DT::datatable
 #' @param keys `character`. Defaults to all columns under the assumption that at least every row is unique.
 #' @param format function accepting and returning a \code{\link[DT]{datatable}}
@@ -89,6 +91,9 @@ eDTOutput <- function(id,...) {
 #' - result `reactive` modified version of `data` (saved)
 #' - state `reactive` current state of the `data` (unsaved)
 #' - selected `reactive` selected rows of the `data` (unsaved)
+#' - edited `reactive` edited rows (saved)
+#' - inserted `reactive` inserted rows (saved)
+#' - deleted `reactive` deleted rows (saved)
 #' 
 #' @examples 
 #' ## Only run this example in interactive R sessions
@@ -816,7 +821,7 @@ eDTServer <- function(
         
         observeEvent(input$DT_cell_edit, {
               rv$edits <- input$DT_cell_edit
-              rv$edits_react <-  rv$edits_react + 1
+              rv$edits_react <- rv$edits_react + 1
             })
         
         observeEvent(rv$edits_react, {
@@ -1080,7 +1085,7 @@ eDTServer <- function(
               }
             })
         
-        observeEvent(input$confirmCommit, {              
+        observeEvent(input$confirmCommit, {     
               req(!is.null(effectiveChanges()) && isTruthy(effectiveChanges()))
               modified <- effectiveChanges()
               cols <- as.character(dplyr::tbl_vars(data()))
@@ -1117,9 +1122,9 @@ eDTServer <- function(
                     # inserts
                     inserted <- effectiveInserted()
                     if(!checkForeignTbls(inserted, foreignTbls())){
-                      stop("You made invalid edits to a row.")
+                      stop("You made invalid inserts.")
                     }
-                    inserted <- inserted[,cols]
+                    inserted <- inserted[,cols,drop=FALSE]
                     
                     if(nrow(deleted)){
                       if(inherits(result, 'tbl_dbi') & in_place()){
@@ -1138,7 +1143,7 @@ eDTServer <- function(
                                 dbplyr::remote_table(result))[base::colnames(deleted)])
                       }
                       
-                      result <- rows_delete(
+                      result <- e_rows_delete(
                           x = result,
                           y = deleted,
                           by = keys(),
@@ -1149,14 +1154,15 @@ eDTServer <- function(
                         DBI::dbRemoveTable(dbplyr::remote_con(result), temp_name)
                       }
                     }
+					
                     if(nrow(edited)){
                       result <- e_rows_update(
                           x = result,
                           y = edited,
                           match = match,
                           by = keys(),
-                          in_place = in_place())
-                    }
+                          in_place = in_place())				  
+                    }					
                     
                     if(nrow(inserted)){
 # Needed code should there be a switch to dbplyr::rows_insert
@@ -1186,8 +1192,13 @@ eDTServer <- function(
 #                      }       
                     }
                     
+					# Data to return to user
                     rv$committedData <- result
-                    
+					rv$inserted <- inserted
+					rv$edited <- edited
+					rv$deleted <- deleted
+					
+					
                     # Set modified and rendered to comitted version
                     # re-read data in case of in_place modification
                     # This is because certain backends might modify the row further with defaults etc.
@@ -1285,7 +1296,10 @@ eDTServer <- function(
         return(list(
                 result = result,
                 state = reactive({castToTemplate(rv$modifiedData[!rv$modifiedData[[deleteCol]],dataVars()], data())}),
-                selected = reactive({castToTemplate(selected()[,dataVars()], data())})
+                selected = reactive({castToTemplate(selected()[,dataVars()], data())}),
+				inserted = reactive({castToTemplate(rv$inserted[,dataVars()], data())}),
+				edited = reactive({castToTemplate(rv$edited[,dataVars()], data())}),
+				deleted = reactive({castToTemplate(rv$deleted[,dataVars()], data())})
             ))
       }
   )
@@ -1304,6 +1318,7 @@ eDTServer <- function(
 #' @return `boolean`
 #' 
 #' @author Jasper Schelfhout
+#' @keywords internal
 evalCanDeleteRow <- function(
     row,
     canDeleteRow = TRUE,
@@ -1343,6 +1358,7 @@ evalCanDeleteRow <- function(
 #' @return `boolean`
 #' 
 #' @author Jasper Schelfhout
+#' @keywords internal
 evalCanEditRow <- function(row, canEditRow = TRUE, statusCol='_editbl_status'){
   
   # Prevent evaluating logic and speed up for most common use-case
@@ -1380,6 +1396,7 @@ evalCanEditRow <- function(row, canEditRow = TRUE, statusCol='_editbl_status'){
 #' @return `boolean`
 #' 
 #' @author Saar Junius
+#' @keywords internal
 evalCanCloneRow <- function(row, canCloneRow = TRUE, statusCol='_editbl_status'){
   
   # Prevent evaluating logic and speed up for most common use-case
@@ -1416,6 +1433,7 @@ evalCanCloneRow <- function(row, canCloneRow = TRUE, statusCol='_editbl_status')
 #' @importFrom dplyr relocate all_of
 #' @importFrom uuid UUIDgenerate
 #' @author Jasper Schelfhout
+#' @keywords internal
 initData <- function(
     data,
     ns,
@@ -1461,6 +1479,7 @@ initData <- function(
 #' @importFrom rlang :=
 #' 
 #' @author Jasper Schelfhout
+#' @keywords internal
 addButtons <- function(
     df,
     columnName,
@@ -1502,6 +1521,7 @@ addButtons <- function(
 #'   is faster.
 #' @importFrom shiny div actionButton icon
 #' @seealso createEditButtonHTML
+#' @keywords internal
 createDeleteButtonHTML_shiny <- function(
     ns = "%1$s",
     suffix = "%2$s",
@@ -1528,6 +1548,7 @@ createDeleteButtonHTML_shiny <- function(
 #'   is faster.
 #' @seealso createEditButtonHTML
 #' @importFrom shiny div actionButton icon
+#' @keywords internal
 createEditButtonHTML_shiny <- function(
     ns = "%1$s",
     suffix = "%2$s",
@@ -1553,6 +1574,7 @@ createEditButtonHTML_shiny <- function(
 #'   is faster.
 #' @seealso createCloneButtonHTML
 #' @importFrom shiny div actionButton icon
+#' @keywords internal
 createCloneButtonHTML_shiny <- function(
   ns = "%1$s",
   suffix = "%2$s",
@@ -1577,6 +1599,7 @@ createCloneButtonHTML_shiny <- function(
 #' @param ns `character(1)` namespace
 #' @param disabled `logical(1)` wether or not the button has to be disabled
 #' @return `character(1)` HTML
+#' @keywords internal
 createEditButtonHTML <- function(
     ns,
     suffix,
@@ -1597,6 +1620,7 @@ createEditButtonHTML <- function(
 #' @param ns `character(1)` namespace
 #' @param disabled `logical(1)` wether or not the button has to be disabled
 #' @return `character(1)` HTML
+#' @keywords internal
 createDeleteButtonHTML <- function(
     ns = "%1$s",
     suffix = "%2$s",
@@ -1616,6 +1640,7 @@ createDeleteButtonHTML <- function(
 #' @param ns `character(1)` namespace
 #' @param disabled `logical(1)` wether or not the button has to be disabled
 #' @return `character(1)` HTML
+#' @keywords internal
 createCloneButtonHTML <- function(
   ns = "%1$s",
   suffix = "%2$s",
@@ -1633,14 +1658,15 @@ createCloneButtonHTML <- function(
 
 #' Re-usable documentation
 #' @param canEditRow can be either of the following:
-#'    - `logical`, e.g. TRUE or FALSE
+#'    - `logical`, e.g. TRUE or FALSE. In case of `FALSE`, buttons will not be visible except for new rows.
 #'    - `function`. Needs as input an argument `row` which accepts a single row `tibble` and as output TRUE/FALSE.
 #' @param canCloneRow can be either of the following:
-#'    - `logical`, e.g. TRUE or FALSE
+#'    - `logical`, e.g. TRUE or FALSE. In case of `FALSE`, buttons will not be visible except for new rows.
 #'    - `function`. Needs as input an argument `row` which accepts a single row `tibble` and as output TRUE/FALSE.
 #' @param canDeleteRow can be either of the following:
-#'    - `logical`, e.g. TRUE or FALSE
+#'    - `logical`, e.g. TRUE or FALSE. In case of `FALSE`, buttons will not be visible except for new rows.
 #'    - `function`. Needs as input an argument `row` which accepts a single row `tibble` and as output TRUE/FALSE.
+#' @keywords internal
 canXXXRowTemplate <- function(canEditRow, canCloneRow, canDeleteRow){
   NULL
 }
@@ -1654,6 +1680,7 @@ canXXXRowTemplate <- function(canEditRow, canCloneRow, canDeleteRow){
 #'    if `NULL`, the data is interpreted as 'unmodified'.
 #' @inheritParams canXXXRowTemplate
 #' @return `character(1)` HTML
+#' @keywords internal
 createButtons <- function(
     row,
     suffix,
@@ -1663,19 +1690,45 @@ createButtons <- function(
     canCloneRow = TRUE,
     statusCol = '_editbl_status'
 ){
-  deleteButton <- createDeleteButtonHTML(
-      ns=ns,
-      suffix=suffix,
-      disabled = !evalCanDeleteRow(row=row, canDeleteRow=canDeleteRow, statusCol=statusCol))
-  editButton <- createEditButtonHTML(
-       ns=ns,
-       suffix=suffix,
-       disabled = !evalCanEditRow(row=row, canEditRow=canEditRow, statusCol=statusCol))
-  cloneButton <- createCloneButtonHTML(
-    ns = ns,
-    suffix = suffix,
-    disabled = !evalCanCloneRow(row = row, canCloneRow = canCloneRow, statusCol = statusCol))
-
+  # Hide delete completely if canDeleteRow = FALSE. With the exception of newly created rows.
+  if(is.logical(canDeleteRow) 
+	&& !canDeleteRow 
+	&& (is.null(statusCol) || row[[statusCol]] != 'inserted')
+  ){
+    deleteButton <- ""
+  } else {
+    deleteButton <- createDeleteButtonHTML(
+			  ns=ns,
+			  suffix=suffix,
+			  disabled = !evalCanDeleteRow(row=row, canDeleteRow=canDeleteRow, statusCol=statusCol))
+  }
+  
+  # Hide edit completely if canEditRow = FALSE. With the exception of newly created rows.
+  if(is.logical(canEditRow) 
+		  && !canEditRow 
+		  && (is.null(statusCol) || row[[statusCol]] != 'inserted')
+		  ){
+	  editButton <- ""
+  } else {
+	  editButton <- createEditButtonHTML(
+			  ns=ns,
+			  suffix=suffix,
+			  disabled = !evalCanEditRow(row=row, canEditRow=canEditRow, statusCol=statusCol))
+  }
+  
+  # Hide clone button completely if canCloneRow = FALSE. With the exception of newly created rows.
+  if(is.logical(canCloneRow) 
+		  && !canCloneRow 
+		  && (is.null(statusCol) || row[[statusCol]] != 'inserted')
+		  ){
+	  cloneButton <- ""
+  } else {
+	  cloneButton <- createCloneButtonHTML(
+			  ns = ns,
+			  suffix = suffix,
+			  disabled = !evalCanCloneRow(row = row, canCloneRow = canCloneRow, statusCol = statusCol))
+  }
+  
   result <- sprintf('<div class="btn-group">%1$s%2$s%3$s</div>',
       deleteButton,
       editButton,
@@ -1690,6 +1743,7 @@ createButtons <- function(
 #' @details <https://stackoverflow.com/questions/60406027/how-to-disable-double-click-reactivity-for-specific-columns-in-r-datatable>
 #' @details <https://stackoverflow.com/questions/75406546/apply-css-styling-to-a-single-dt-datatable>
 #' @return `character` CSS
+#' @keywords internal
 disableDoubleClickButtonCss <- function(id){
   sprintf("
           #%1$s > .dataTables_wrapper > table tbody td:nth-child(1) {pointer-events: none;}

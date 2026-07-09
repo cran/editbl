@@ -16,7 +16,9 @@ instead of the default data column names; alternatively, you can provide a
 the table, and \code{i} or \code{oldName} is the index of the current
 column name}
 
-\item{data}{\code{tbl}. The function will automatically cast to tbl if needed.}
+\item{data}{\code{tbl}. When using non-standard tibble objects, install the required package implementing specific methods.
+(\code{data.table}: dtplyr, spark: sparklyr, generic database: dbplyr,...).
+While other tabular objects like \code{data.frame} are supported, explicitly casting to \code{tbl} is recommended.}
 }
 \value{
 named character vector
@@ -27,3 +29,4 @@ Standardize colnames argument to the format of named character vector
 \author{
 Jasper Schelfhout
 }
+\keyword{internal}
